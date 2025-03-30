@@ -342,7 +342,7 @@ char* rx_server_ajax(struct mg_connection* mc, char* ip_forwarded) {
                             rc = 23;
                             goto fail;
                         }
-                        if ((begin != 0 || end != 0) && (begin != 0 && end != 2400))
+                        if (!(begin == 0 && end == 2400) && !(begin == 0 && end == 0))
                             sb3 = kstr_asprintf(sb3, "%s\"b0\":%.0f, \"e0\":%.0f", sb3 ? ", " : "", begin, end);
 
                         // N_CSV_FIELDS_SIG_BW field is optional for backward compatibility
