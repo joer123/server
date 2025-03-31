@@ -63,32 +63,7 @@ endif(CCACHE_FOUND)
 if(ENABLE_HDFL)
     ## HFDL external depedency
 
-    ExternalProject_Add(
-        liquid-dsp
-        URL https://github.com/jgaeddert/liquid-dsp/archive/refs/tags/v1.7.0.tar.gz
-        PATCH_COMMAND  patch -p1 < ${CMAKE_SOURCE_DIR}/extensions/HFDL/patches/liquid.patch
-        CONFIGURE_COMMAND cd <SOURCE_DIR> && ./bootstrap.sh && ./configure --prefix=${CMAKE_BINARY_DIR}/liquid-dsp
-        DOWNLOAD_EXTRACT_TIMESTAMP false
-        BUILD_COMMAND make -C <SOURCE_DIR>
-        INSTALL_COMMAND make install -C <SOURCE_DIR>
-    )
-
-    set(LIQUID_DSP_INCLUDE_DIR ${CMAKE_BINARY_DIR}/liquid-dsp/include)
-    set(LIQUID_DSP_LIB_DIR ${CMAKE_BINARY_DIR}/liquid-dsp/lib)
-
-    ExternalProject_Add(
-        libacars
-        URL https://github.com/szpajder/libacars/archive/refs/tags/v2.2.0.tar.gz
-        PATCH_COMMAND  patch -p1 < ${CMAKE_SOURCE_DIR}/extensions/HFDL/patches/libacars.patch
-        DOWNLOAD_EXTRACT_TIMESTAMP false
-        CMAKE_ARGS
-            -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/libacars
-            -DBUILD_SHARED_LIBS=OFF  # Ensure static library is built
-    )
-
-    set(LIBACARS_INCLUDE_DIR ${CMAKE_BINARY_DIR}/libacars/include/libacars-2/)
-    set(LIBACARS_LIB_DIR ${CMAKE_BINARY_DIR}/libacars/lib)
-
+    add_subdirectory(${UPSTREAM_DIR}/externals/dumphfdl)
 endif(ENABLE_HDFL)
 ###########################################################
 
@@ -141,8 +116,6 @@ set(EXT_INCLUDES
     "${UPSTREAM_DIR}/extensions/FT8/ft8_lib"
     "${UPSTREAM_DIR}/extensions/DRM/dream/datadecoding"
     "${UPSTREAM_DIR}/extensions/DRM/dream/SDC"
-    ${LIQUID_DSP_INCLUDE_DIR}
-    ${LIBACARS_INCLUDE_DIR}
 )
 
 FOREACH(ext_name ${EXTENSIONS})
@@ -250,13 +223,7 @@ target_link_libraries(websdr.bin PRIVATE
 )
 
 if(ENABLE_HDFL)
-    target_link_libraries(websdr.bin PRIVATE
-        ${LIQUID_DSP_LIB_DIR}/libliquid.a
-        ${LIBACARS_LIB_DIR}/libacars-2.a
-        /usr/lib/libsqlite3.a
-    )
-    add_dependencies(websdr.bin liquid-dsp libacars)
-
+    add_dependencies(websdr.bin dumphfdl)
 endif(ENABLE_HDFL)
 
 cmake_host_system_information(RESULT _host_name QUERY HOSTNAME)
