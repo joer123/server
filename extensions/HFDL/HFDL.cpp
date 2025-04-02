@@ -9,6 +9,8 @@
 static hfdl_t hfdl;
 static hfdl_chan_t hfdl_chan[MAX_RX_CHANS];
 
+static void hfdl_close(int rx_chan);
+
 static void hfdl_pushback_file_data(int rx_chan, int instance, int nsamps, TYPECPX *samps)
 {
     hfdl_chan_t *e = &hfdl_chan[rx_chan];
@@ -27,9 +29,9 @@ static void hfdl_pushback_file_data(int rx_chan, int instance, int nsamps, TYPEC
     // Have hfdl_task() do 12k => 36k resampling before calling decoder (which requires 36 kHz sampling)
     for (int i = 0; i < nsamps; i++) {
         if (e->s2p < hfdl.s2p_end) {
-            samps->re = (TYPEREAL) (s4_t) *e->s2p;
+            samps->re = (TYPEREAL) (s4_t) *e->s2p / 32768.0;
             e->s2p++;
-            samps->im = (TYPEREAL) (s4_t) *e->s2p;
+            samps->im = (TYPEREAL) (s4_t) *e->s2p / 32768.0;
             e->s2p++;
             samps++;
         }
@@ -78,8 +80,9 @@ static void hfdl_task(void *param)
 
                 while (total_written < to_write) {
                     ssize_t n = write(e->input_pipe, data_ptr + total_written, to_write - total_written);
-                    if (n < 0) {
-                        perror("HFDL: write() failed");
+                    if (n <= 0) {
+                        // perror("HFDL: write() failed");
+                        hfdl_close(rx_chan);
                         break;
                     }
                     total_written += n;
@@ -111,7 +114,7 @@ void hfdl_close(int rx_chan)
 
     if (e->input_pipe)
     {
-        // kill(e->pid, SIGTERM);
+        kill(e->pid, SIGTERM);
         close(e->input_pipe);
         close(e->output_pipe);
 
@@ -128,13 +131,11 @@ void hfdl_close(int rx_chan)
 
 bool hfdl_receive_cmds(u2_t key, char *cmd, int rx_chan)
 {
-    int i, n;
-    
     if (key == CMD_TUNE) {
         char *mode_m;
         double locut, hicut, freq;
         int mparam;
-        n = sscanf(cmd, "SET mod=%16ms low_cut=%lf high_cut=%lf freq=%lf param=%d", &mode_m, &locut, &hicut, &freq, &mparam);
+        int n = sscanf(cmd, "SET mod=%16ms low_cut=%lf high_cut=%lf freq=%lf param=%d", &mode_m, &locut, &hicut, &freq, &mparam);
         if (n == 4 || n == 5) {
 	        hfdl_chan_t *e = &hfdl_chan[rx_chan];
 	        e->tuned_f = freq;
@@ -189,7 +190,7 @@ static void dumphfdl_task(void *param)
         
             "--sample-rate", "12000", "--centerfreq", "0", "0", NULL
         ); // Replace with the target process
-        perror("execlp");
+        // perror("execlp");
         exit(EXIT_FAILURE);
     } else {
         close(in_pipe[0]);  // Close unused read end
@@ -206,6 +207,11 @@ static void dumphfdl_task(void *param)
             if (n > 0) {
                 ext_send_msg_encoded(e->rx_chan, false, "EXT", "chars", "%.*s", n, buffer);
             }
+            else if (n <= 0) {
+                hfdl_close(rx_chan);
+                // perror("HFDL: read() failed");
+                break;
+            }
         }
     }
 
@@ -215,7 +221,6 @@ static void dumphfdl_task(void *param)
 bool hfdl_msgs(char *msg, int rx_chan)
 {
 	hfdl_chan_t *e = &hfdl_chan[rx_chan];
-	int n;
 	
 	//printf("### hfdl_msgs RX%d <%s>\n", rx_chan, msg);
 	
@@ -326,7 +331,6 @@ void HFDL_main()
 	    return;
 	#endif
 
-    int n;
     char *file;
     int fd;
     const char *fn;
