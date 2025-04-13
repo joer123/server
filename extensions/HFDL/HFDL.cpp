@@ -154,6 +154,7 @@ static void dumphfdl_task(void *param)
     int rx_chan = (int) FROM_VOID_PARAM(param);
     hfdl_chan_t *e = &hfdl_chan[rx_chan];
     pid_t pid;
+    char sample_rate_str[24];
 
     if (pipe(in_pipe) == -1 || pipe(out_pipe) == -1) {
         printf("HFDL: pipe() failed\n");
@@ -176,6 +177,8 @@ static void dumphfdl_task(void *param)
         close(in_pipe[0]);
         close(out_pipe[1]);
 
+        sprintf(sample_rate_str, "%d", snd_rate);
+
         execlp("/media/mmcblk0p1/dumphfdl",     
             "/media/mmcblk0p1/dumphfdl", "--system-table", DIR_SAMPLES "/HFDL_systable.conf",
             "--iq-file", "-",
@@ -183,12 +186,12 @@ static void dumphfdl_task(void *param)
             #ifdef SAMPLES_CF32
                 "--sample-format", "CF32",
             #endif
-        
+
             #ifdef SAMPLES_CS16
                 "--sample-format", "CS16",
             #endif
         
-            "--sample-rate", "12000", "--centerfreq", "0", "0", NULL
+            "--sample-rate", sample_rate_str, "--centerfreq", "0", "0", NULL
         ); // Replace with the target process
         // perror("execlp");
         exit(EXIT_FAILURE);
@@ -294,8 +297,8 @@ bool hfdl_msgs(char *msg, int rx_chan)
         e->test_f = test_f;
         e->nsamps = 0;
 
-        //bool test = (test_f != 0) && (snd_rate != SND_RATE_3CH);
-        bool test = (test_f != 0);
+        bool test = (test_f != 0) && (snd_rate != SND_RATE_4CH);
+        //bool test = (test_f != 0);
         //printf("HFDL: test=%d test_f=%.2f\n", test, e->test_f);
         if (test) {
             // misuse ext_register_receive_iq_samps() to pushback audio samples from the test file
