@@ -79,9 +79,9 @@ CFastFIR::CFastFIR() {
         m_pFFTOverlapBuf[i].im = 0.0;
     }
 
-    m_FFT_CoefPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFilterCoef, (MFFTW_COMPLEX*)m_pFilterCoef, FFTW_FORWARD, FFTW_ESTIMATE);
-    m_FFT_FwdPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFFTBuf, (MFFTW_COMPLEX*)m_pFFTBuf, FFTW_FORWARD, FFTW_ESTIMATE);
-    m_FFT_RevPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFFTBuf, (MFFTW_COMPLEX*)m_pFFTBuf, FFTW_BACKWARD, FFTW_ESTIMATE);
+    m_FFT_CoefPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFilterCoef, (MFFTW_COMPLEX*)m_pFilterCoef, FFTW_FORWARD, FFTW_MEASURE);
+    m_FFT_FwdPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFFTBuf, (MFFTW_COMPLEX*)m_pFFTBuf, FFTW_FORWARD, FFTW_MEASURE);
+    m_FFT_RevPlan = MFFTW_PLAN_DFT_1D(CONV_FFT_SIZE, (MFFTW_COMPLEX*)m_pFFTBuf, (MFFTW_COMPLEX*)m_pFFTBuf, FFTW_BACKWARD, FFTW_MEASURE);
 
     m_FLoCut = -1.0;
     m_FHiCut = 1.0;
@@ -267,7 +267,6 @@ int CFastFIR::ProcessData(int rx_chan, int InLength, TYPECPX* InBuf, TYPECPX* Ou
                                   reinterpret_cast<fftwf_complex*>(m_pFFTBuf));
             }
             else {
-                // CpxMpy(CONV_FFT_SIZE, m_pFilterCoef_CIC, m_pFFTBuf, m_pFFTBuf);
                 simd_multiply_ccc(CONV_FFT_SIZE,
                                   reinterpret_cast<const fftwf_complex*>(m_pFilterCoef_CIC),
                                   reinterpret_cast<const fftwf_complex*>(m_pFFTBuf),
@@ -282,16 +281,11 @@ int CFastFIR::ProcessData(int rx_chan, int InLength, TYPECPX* InBuf, TYPECPX* Ou
             MFFTW_EXECUTE(m_FFT_RevPlan);
 
             if (OutBuf != NULL) {
-                for (j = (CONV_FIR_SIZE - 1); j < CONV_FFT_SIZE; j++) {
-                    // copy FFT output into OutBuf minus CONV_FIR_SIZE-1 samples at beginning
-                    OutBuf[outpos++] = m_pFFTBuf[j];
-                }
+                memcpy(&OutBuf[outpos], &m_pFFTBuf[CONV_FIR_SIZE - 1], (CONV_FFT_SIZE - (CONV_FIR_SIZE - 1)) * sizeof(TYPECPX));
+                outpos += (CONV_FFT_SIZE - (CONV_FIR_SIZE - 1));
             }
 
-            for (j = 0; j < (CONV_FIR_SIZE - 1); j++) {
-                // copy overlap buffer into start of fft input buffer
-                m_pFFTBuf[j] = m_pFFTOverlapBuf[j];
-            }
+            memcpy(m_pFFTBuf, m_pFFTOverlapBuf, (CONV_FIR_SIZE - 1) * sizeof(TYPECPX));
 
             // reset input position to data start position of fft input buffer
             m_InBufInPos = CONV_FIR_SIZE - 1;
@@ -299,17 +293,4 @@ int CFastFIR::ProcessData(int rx_chan, int InLength, TYPECPX* InBuf, TYPECPX* Ou
     }
 
     return outpos; // return number of output samples processed and placed in OutBuf
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//   Complex multiply N point array m with src and place in dest.
-// src and dest can be the same buffer.
-///////////////////////////////////////////////////////////////////////////////
-inline void CFastFIR::CpxMpy(int N, TYPECPX* m, TYPECPX* src, TYPECPX* dest) {
-    for (int i = 0; i < N; i++) {
-        TYPEREAL sr = src[i].re;
-        TYPEREAL si = src[i].im;
-        dest[i].re = m[i].re * sr - m[i].im * si;
-        dest[i].im = m[i].re * si + m[i].im * sr;
-    }
 }

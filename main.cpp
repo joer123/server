@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
     kiwi.wf_share = admcfg_default_bool("wf_share", false, &update_admcfg);
     kiwi.narrowband = admcfg_default_bool("narrowband", false, &update_admcfg);
     kiwi.snd_rate = admcfg_default_int("snd_rate", 0, &update_admcfg);
-    if (kiwi.snd_rate >= 3) { kiwi.snd_rate = 0; update_admcfg = true; }
+    if (kiwi.snd_rate >= 4) { kiwi.snd_rate = 0; update_admcfg = true; }
 
     if (update_admcfg) admcfg_save_json(cfg_adm.json); // during init doesn't conflict with admin cfg
 
@@ -250,7 +250,7 @@ int main(int argc, char* argv[]) {
             ext_update_get_sample_rateHz(ADC_CLK_TYP), snd_rate, nrx_samps);
 
     assert(nrx_samps <= MAX_NRX_SAMPS);
-    assert(nrx_samps < FASTFIR_OUTBUF_SIZE); // see data_pump.h
+    assert(nrx_samps <= FASTFIR_OUTBUF_SIZE); // see data_pump.h
 
     rx_num = rx_chans, wf_num = wf_chans;
     monitors_max = (rx_chans * N_CAMP) + N_QUEUERS;
