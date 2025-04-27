@@ -16,7 +16,7 @@ if(NOT CMAKE_BUILD_TYPE)
    message(STATUS "Build type not specified: defaulting to Release")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set (CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_CXX_FLAGS "-Wall -fsingle-precision-constant -pthread")
@@ -50,6 +50,7 @@ pkg_check_modules(GPS REQUIRED libgps)
 pkg_check_modules(UNWIND REQUIRED libunwind)
 pkg_check_modules(SQLite3 REQUIRED sqlite3)
 pkg_check_modules(CURL REQUIRED libcurl)
+pkg_check_modules(SSL REQUIRED openssl)
 
 set(CONFIG_LIBRARIES "/usr/lib/libconfig++.a")
 
@@ -163,6 +164,7 @@ file(GLOB_RECURSE KIWI_SRCS
 
     "${UPSTREAM_DIR}/pkgs/mongoose/*.cpp"
     "${UPSTREAM_DIR}/pkgs/sha256/*.cpp"
+    "${UPSTREAM_DIR}/pkgs/mqtt-c/*.c"
 )
 
 add_executable(websdr.bin ${KIWI_SRCS} ${EXT_SRCS}
@@ -204,6 +206,7 @@ target_include_directories(websdr.bin PUBLIC
     "${UPSTREAM_DIR}/pkgs/mongoose"
     "${UPSTREAM_DIR}/pkgs/sha256"
     "${UPSTREAM_DIR}/pkgs/utf8/"
+    "${UPSTREAM_DIR}/pkgs/mqtt-c/"
 )
 
 target_include_directories(websdr.bin PUBLIC ${FFTW3_INCLUDE_DIRS})
@@ -220,6 +223,7 @@ target_link_libraries(websdr.bin PRIVATE
     ${UNWIND_LIBRARIES}
     ${CONFIG_LIBRARIES}
     ${CURL_LIBRARIES}
+    ${SSL_LIBRARIES}
 )
 
 if(ENABLE_HDFL)
@@ -261,6 +265,10 @@ target_compile_definitions(websdr.bin PUBLIC
 
     # for SIMD
     __ARM_NEON
+
+    # Enable SSL
+    USE_SSL
+    MQTT_USE_BIO
 
     # for extensions
     DRM HAVE_DLFCN_H HAVE_MEMORY_H HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRINGS_H
