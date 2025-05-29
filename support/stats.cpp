@@ -33,6 +33,7 @@ Boston, MA  02110-1301, USA.
 #include "non_block.h"
 #include "eeprom.h"
 #include "shmem.h"
+#include "mqttpub.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -214,6 +215,8 @@ static void webserver_collect_print_stats(int print) {
         ks = kstr_cat(ks, kstr_list_int("\"cu\":[", "%d", "],", &del_usi[0][0], ncpu));
         ks = kstr_cat(ks, kstr_list_int("\"cs\":[", "%d", "],", &del_usi[1][0], ncpu));
         ks = kstr_cat(ks, kstr_list_int("\"ci\":[", "%d", "]", &del_usi[2][0], ncpu));
+
+        mqtt_publish("stat", "\"temp\":%.0f, \"cpu\": %.0f", temp_deg_mC, (del_usi[0][0] + del_usi[0][1]) * 0.5f);
 
         for (i = 0; i < ncpu; i++) {
             last_usi[0][i] = usi[0][i];
