@@ -45,7 +45,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch
     )
 else()
     set(PLATFORM_FLAGS -ffast-math)
-    set(ENABLE_HFDL OFF)
+    set(ENABLE_HDFL OFF)
     SET(EMULATOR ON)
 endif()
 
@@ -175,6 +175,7 @@ file(GLOB_RECURSE KIWI_SRCS
     "${UPSTREAM_DIR}/init/*.cpp"
     "${UPSTREAM_DIR}/si5351/*.cpp"
 
+    "${UPSTREAM_DIR}/pkgs/sdrpp_server/*.cpp"
     "${UPSTREAM_DIR}/pkgs/mongoose/*.cpp"
     "${UPSTREAM_DIR}/pkgs/sha256/*.cpp"
     "${UPSTREAM_DIR}/pkgs/mqtt-c/*.c"
